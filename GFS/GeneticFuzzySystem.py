@@ -322,40 +322,36 @@ class BaseGFT(metaclass=ABCMeta):
 
     def init_population(self) -> None:
         """
-        种群初始化函数，初始化规定数目个个体（Individual），并为GFT下的每一个。
+        种群初始化函数，初始化规定数目个个体（Individual），一个个体的染色体为二维数组，其中每一维代表一个特定规则库的染色体。
         @return: None
         """
         for i in range(self.population_size):
             rulebase_chromosome = []
             mf_chromosome = []
 
-            """ 由于存在多个规则库，不同规则库由不同的FIS决策器决策不同行为，因此需要为每一个规则库生成 """
             fis_num = len(self.rule_lib_list)
+            """ 由于存在多个规则库，不同规则库由不同的FIS决策器决策不同行为，因此需要为每一个规则库生成一条随机染色体 """
             for index in range(fis_num):
-                genes = []
-                rule_len = len(self.RB_gft[index].fuzzy_variable_list)
-                output_fuzzy_variable = self.RB_gft[index].fuzzy_variable_list[rule_len - 1]
+                output_fuzzy_variable = self.rule_lib_list[index].fuzzy_variable_list[-1]
                 output_terms = output_fuzzy_variable.all_term()
-                for term in output_terms:
-                    genes.append(term.id)
-                all_term_list = []
-                for fuzzy_variable in self.RB_gft[index].fuzzy_variable_list:
-                    fuzzy_variable_terms = fuzzy_variable.all_term()
-                    all_term_list.extend(copy.deepcopy(fuzzy_variable_terms))
-                now_rulebase_chromosome_size = len(self.RB_gft[index].rule_base)
-                now_mf_chromosome_size = len(all_term_list) * 3
-                now_rulebase_chromosome = []
-                now_mf_chromosome = []
-                for j in range(now_rulebase_chromosome_size):
-                    rand_genes = random.randint(0, len(genes) - 1)
-                    now_rulebase_chromosome.append(genes[rand_genes])
-                for j in range(0, now_mf_chromosome_size):
-                    rand_offset = random.randint(0, 20) - 10
-                    now_mf_chromosome.append(rand_offset)
-                rulebase_chromosome.append(now_rulebase_chromosome)
-                mf_chromosome.append(now_mf_chromosome)
+
+                """ 将输出模糊变量的term按id数字化 """
+                genes = [term.id for term in output_terms]
+                all_term_list = [fuzzy_variable.all_term() for fuzzy_variable in self.rule_lib_list[index].fuzzy_variable_list]
+                current_rulebase_chromosome_size = len(self.rule_lib_list[index].rule_base)
+
+                """ 默认使用三角隶属函数，因此隶属函数染色体长度等于隶属函数个数*3 """
+                current_mf_chromosome_size = len(all_term_list) * 3
+                current_rulebase_chromosome = [genes[random.randint(0, len(genes)-1)] for _ in range(current_rulebase_chromosome_size)]
+                current_mf_chromosome = [random.randint(-10, 10) for _ in range(current_mf_chromosome_size)]
+
+                """ 往个体的染色体中加入代表当前规则库的染色体 """
+                rulebase_chromosome.append(current_rulebase_chromosome)
+                mf_chromosome.append(current_mf_chromosome)
+
             individual = {"rulebase_chromosome": rulebase_chromosome, "mf_chromosome": mf_chromosome, "fitness": 0,
                           "flag": 0, "average_fitness": []}
+
             self.population.append(individual)
 
     def compute_fitness(self, individual: dict) -> float:
