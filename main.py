@@ -1,57 +1,50 @@
-import skfuzzy as fuzzy
-import numpy as np
-import skfuzzy.control as ctrl
+"""
+@Author: P_k_y
+@Time: 2020/12/16
+"""
+from GFS.FIS.DecisionSystemSimulation import DecisionSystemSimulation
+from GFS.FIS.FuzzyVariable import FuzzyVariable
+from GFS.FIS.RuleLib import RuleLib
+from GFS.FIS.Term import Term
+from GFS.GeneticFuzzySystem import BaseGFS
+import random
 
 
-def transfer_number_to_class_index(value, max_value, class_num) -> int:
-    """
-    给定一个输入值，判断该值处于一个连续区间中的第几段，用于将连续变量离散化。
-    :param value: 输入值
-    :param max_value: 区间最大值
-    :param class_num: 该区间一共被分成几段
-    :return: 所在段索引
-    """
-    assert value <= max_value, "[ERROR] Input Value(%f) can't be bigger than Max Value(%f)!" % (value, max_value)
-    block_length = max_value / class_num
-    if value == 0:
-        return 0
-    else:
-        return int((value - 1e-5) / block_length)
+class GFS(BaseGFS):
 
+    def __init__(self, rule_lib, population_size, episode, mutation_pro=0.01, cross_pro=0.9):
+        """
+        实现自定义GFS子类（继承自BaseGFS基类）并实现自定义计算仿真方法。
+        @param rule_lib: 规则库对象
+        @param population_size: 种群规模（存在的染色体条数，可以理解为存在的规则库个数）
+        @param episode: 训练多少轮
+        @param mutation_pro: 变异概率
+        @param cross_pro: 交叉概率
+        """
+        super().__init__(rule_lib, population_size, episode, mutation_pro, cross_pro)
 
-def main():
-    """ 建立模糊变量 """
-    radar_heading = ctrl.Antecedent(np.arange(0, 360, 1), 'radar_heading')
-    radar_distance = ctrl.Antecedent(np.arange(0, 100, 1), 'radar_distance')
-    action = ctrl.Consequent(np.arange(0, 3, 1), 'action')
-
-    """ 建立隶属函数 """
-    radar_heading.automf(3, names=[str(x) for x in range(3)])
-    radar_distance.automf(3, names=['near', 'middle', 'far'])
-    action.automf(3, names=['left', 'front', 'right'])
-
-    """ 建立规则库 """
-    rule_list = [ctrl.Rule(radar_heading['0'] | radar_distance['near'], action['left']),
-                 ctrl.Rule(radar_heading['1'] | radar_distance['middle'], action['front']),
-                 ctrl.Rule(radar_heading['2'] | radar_distance['far'], action['right'])]
-    rule_list[0].view()
-
-    """ 建立FIS仿真器（用于进行计算） """
-    action_simulation = ctrl.ControlSystemSimulation(ctrl.ControlSystem(rule_list))
-
-    """ 输入并进行判断输出结果 """
-    action_simulation.inputs({
-        'radar_heading': 103,
-        'radar_distance': 23
-    })
-    action_simulation.compute()
-
-    print(action_simulation.output)
-    action_value = action_simulation.output['action']
-    action_idx = transfer_number_to_class_index(action_value, action.universe.max(), action.universe.shape[0])
-    print("Action Index After Transformed: ", action_idx)
-    action.view(sim=action_simulation)
+    """ 实现父类抽象方法 """
+    def start_simulation(self, simulators: list) -> float:
+        """
+        根据指定的simulator列表计算出一次仿真后的fitness。
+        @param simulators: DecisionSystemSimulation对象列表
+        @return: 返回fitness值
+        """
+        return random.randint(0, 1000)
 
 
 if __name__ == '__main__':
-    main()
+    quality = FuzzyVariable([0, 10], 'quality')
+    servive = FuzzyVariable([0, 10], 'service')
+    tip = FuzzyVariable([0, 25], 'tip')
+
+    quality.automf(3)
+    servive.automf(3)
+
+    tip['low'] = Term('low', 'tip', [-13, 0, 13], 0)
+    tip['medium'] = Term('medium', 'tip', [0, 13, 25], 1)
+    tip['high'] = Term('high', 'tip', [13, 25, 38], 2)
+    test_rb = RuleLib([quality, servive, tip])
+    ga_test = GFS(rule_lib=test_rb, population_size=6, episode=50, mutation_pro=0.01, cross_pro=0.9)
+    ga_test.train()
+
