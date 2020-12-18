@@ -131,8 +131,19 @@ class RuleLib(object):
         """
         将规则库保存成本地文件
         :param filepath: 保存文件的路径
-        :return:
+        :return: None
         """
         with open(filepath, "w") as f:
             rule_base_dict = {'RuleLib': self.rule_lib, 'chromosome': self.chromosome}
             json.dump(rule_base_dict, f)
+
+    def save_mf_to_file(self, filepath, optimal_individual):
+        """
+        将隶属函数参数保存成本地文件
+        @param optimal_individual: 最优个体对象
+        @param filepath: 保存文件路径
+        @return: None
+        """
+        with open(filepath, "w") as f:
+            mf_dict = {"mf_offset": optimal_individual["mf_chromosome"]}
+            json.dump(mf_dict, f)

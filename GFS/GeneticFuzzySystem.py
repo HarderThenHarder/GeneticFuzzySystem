@@ -25,7 +25,7 @@ class BaseGFS(metaclass=ABCMeta):
         """
         self.rule_lib = rule_lib
         self.population_size = population_size
-        self.rulebase_chromosome_size = len(self.rule_lib.rule_lib)
+        self.rule_lib_chromosome_size = len(self.rule_lib.rule_lib)
         self.all_term_list = []
         for fuzzy_variable in self.rule_lib.fuzzy_variable_list:
             fuzzy_variable_terms = fuzzy_variable.all_term()
@@ -48,14 +48,14 @@ class BaseGFS(metaclass=ABCMeta):
         """
         for i in range(0, self.population_size):
             """ 初始化一条随机染色体，从输出模糊变量中随机选择N个模糊程度（Term） """
-            rulebase_chromosome = [self.genes[random.randint(0, len(self.genes) - 1)] for _ in
-                                   range(self.rulebase_chromosome_size)]
+            rule_lib_chromosome = [self.genes[random.randint(0, len(self.genes) - 1)] for _ in
+                                   range(self.rule_lib_chromosome_size)]
 
             """ 初始化隶属函数偏移的一条随机染色体，默认隶属函数偏移值在[-10, 10] """
             mf_chromosome = [random.randint(-10, 10) for _ in range(self.mf_chromosome_size)]
 
-            """ 一个个体（Individual）包括规则染色体（rulebase_chromosome）和隶属函数偏移染色体（mf_chromosome），flag代表该染色体是否被Simulation过 """
-            individual = {"rulebase_chromosome": rulebase_chromosome, "mf_chromosome": mf_chromosome, "fitness": 0,
+            """ 一个个体（Individual）包括规则染色体（rule_lib_chromosome）和隶属函数偏移染色体（mf_chromosome），flag代表该染色体是否被Simulation过 """
+            individual = {"rule_lib_chromosome": rule_lib_chromosome, "mf_chromosome": mf_chromosome, "fitness": 0,
                           "flag": 0}
 
             self.population.append(individual)
@@ -66,11 +66,15 @@ class BaseGFS(metaclass=ABCMeta):
         @param individual: 个体单位
         @return: 该个体的适应值
         """
+
+        """ 将RuleLib中的数字编码染色体解析为包含多个Rule对象的列表 """
         rb = RuleLib(self.rule_lib.fuzzy_variable_list)
-        rb.encode_by_chromosome(individual["rulebase_chromosome"])
+        rb.encode_by_chromosome(individual["rule_lib_chromosome"])
         rules = rb.decode()
         new_fuzzy_variable_list = copy.deepcopy(self.rule_lib.fuzzy_variable_list)
         count = 0
+
+        """ 对模糊变量的隶属函数参数进行重计算，根据染色体中的隶属函数偏移offset来更改隶属函数三角形的三个点坐标 """
         for fuzzy_variable in new_fuzzy_variable_list:
             for k, v in fuzzy_variable.terms.items():
                 if v.trimf[0] == v.trimf[1] and v.trimf[1] == v.trimf[2] and v.trimf[2] == 0:  # 类别型模糊变量
@@ -80,7 +84,7 @@ class BaseGFS(metaclass=ABCMeta):
                 new_b = v.trimf[1] + individual["mf_chromosome"][count + 1] * offset_value
                 new_c = v.trimf[2] + individual["mf_chromosome"][count + 2] * offset_value
                 new_tri = [new_a, new_b, new_c]
-                new_tri.sort()
+                new_tri.sort()  # 因为平移有正有负，平移后可能会出现a点平移到了b点右边，但三角形的三个点不能乱序，因此需要按从小到大排序
                 count += 3
                 v.trimf = new_tri
 
@@ -107,7 +111,8 @@ class BaseGFS(metaclass=ABCMeta):
         """
         max_len = 40
         current_progress = int(step / total_step * 40)
-        print('\r[Epoch: %d/%d][' % (epoch, total_epoch) + '=' * current_progress + '-' * (max_len - current_progress) + ']', end='')
+        print('\r[Epoch: %d/%d][' % (epoch, total_epoch) + '=' * current_progress + '-' * (
+                max_len - current_progress) + ']', end='')
 
     def select(self, epoch: int, total_epoch: int) -> None:
         """
@@ -131,12 +136,14 @@ class BaseGFS(metaclass=ABCMeta):
 
         """ 按照概率分布选择出种群规模条染色体 """
         selected_population = np.random.choice(self.population, self.population_size, replace=False, p=fit_pro)
-        print("  Min Fitness: %.2f  |  Max Fitness: %.2f  |  Average Fitness: %.2f" % (min(fitness_list), max(fitness_list), sum_fitness / len(fitness_list)))
+        print("  Min Fitness: %.2f  |  Max Fitness: %.2f  |  Average Fitness: %.2f" % (
+            min(fitness_list), max(fitness_list), sum_fitness / len(fitness_list)))
         self.population = list(selected_population)
 
     def select_by_fitness(self) -> None:
         """
-        优胜劣汰算法，直接选择适应值较大的染色体保留，该方法是简化版的选择方法，建议使用select()函数。
+        优胜劣汰算法，直接选择适应值较大的染色体保留，该方法是简化版的选择方法，
+        建议使用select()函数。
         @return: None
         """
         for count, individual in enumerate(self.population):
@@ -156,21 +163,21 @@ class BaseGFS(metaclass=ABCMeta):
         offspring = copy.deepcopy(parent)
 
         """ 随机选择交换基因段的左右位点索引（规则库染色体） """
-        cross_left_position_rulebase = random.randint(0, self.rulebase_chromosome_size - 1)
-        cross_right_position_rulebase = random.randint(cross_left_position_rulebase, self.rulebase_chromosome_size - 1)
+        cross_left_position_rule_lib = random.randint(0, self.rule_lib_chromosome_size - 1)
+        cross_right_position_rule_lib = random.randint(cross_left_position_rule_lib, self.rule_lib_chromosome_size - 1)
 
         """ 交换子代对应位置的基因片段 """
-        offspring[0]["rulebase_chromosome"][cross_left_position_rulebase:cross_right_position_rulebase + 1], \
-            offspring[1]["rulebase_chromosome"][cross_left_position_rulebase:cross_right_position_rulebase + 1] = \
-            offspring[1]["rulebase_chromosome"][cross_left_position_rulebase:cross_right_position_rulebase + 1], \
-            offspring[0]["rulebase_chromosome"][cross_left_position_rulebase:cross_right_position_rulebase + 1]
+        offspring[0]["rule_lib_chromosome"][cross_left_position_rule_lib:cross_right_position_rule_lib + 1], \
+        offspring[1]["rule_lib_chromosome"][cross_left_position_rule_lib:cross_right_position_rule_lib + 1] = \
+            offspring[1]["rule_lib_chromosome"][cross_left_position_rule_lib:cross_right_position_rule_lib + 1], \
+            offspring[0]["rule_lib_chromosome"][cross_left_position_rule_lib:cross_right_position_rule_lib + 1]
 
         """ 随机选择交换基因段的左右位点索引（隶属函数染色体） """
         cross_left_position_mf = random.randint(0, self.mf_chromosome_size - 1)
         cross_right_position_mf = random.randint(cross_left_position_mf, self.mf_chromosome_size - 1)
 
         offspring[0]["mf_chromosome"][cross_left_position_mf:cross_right_position_mf + 1], \
-            offspring[1]["mf_chromosome"][cross_left_position_mf:cross_right_position_mf + 1] = \
+        offspring[1]["mf_chromosome"][cross_left_position_mf:cross_right_position_mf + 1] = \
             offspring[1]["mf_chromosome"][cross_left_position_mf:cross_right_position_mf + 1], \
             offspring[0]["mf_chromosome"][cross_left_position_mf:cross_right_position_mf + 1]
 
@@ -181,7 +188,8 @@ class BaseGFS(metaclass=ABCMeta):
 
     def cross(self) -> None:
         """
-        将一个种群（population）中的所有个体（Individual）按概率进行交叉互换，并将子代添加入当前种群中。
+        将一个种群（population）中的所有个体（Individual）按概率进行交叉互换，
+        并将子代添加入当前种群中。
         @return: None
         """
         offspring = []
@@ -197,18 +205,19 @@ class BaseGFS(metaclass=ABCMeta):
 
     def mutate(self) -> None:
         """
-        基因变异函数，对种群中每一个个体（Individual），随机选择染色体中的某一段，对该段中的每一个基因执行一次基因突变。
+        基因变异函数，对种群中每一个个体（Individual），随机选择染色体中的某一段，
+        对该段中的每一个基因执行一次基因突变。
         @return: None
         """
         for individual in self.population:
             pro = random.random()
             if pro < self.mutation_pro:
                 """ 选取突变点，并将该点之后的全部基因段进行基因突变（规则库） """
-                mutation_pos_rulebase = random.randint(0, self.rulebase_chromosome_size - 1)
+                mutation_pos_rule_lib = random.randint(0, self.rule_lib_chromosome_size - 1)
                 gene_num = len(self.genes)
-                individual["rulebase_chromosome"][mutation_pos_rulebase:] = [random.randint(0, gene_num - 1) for _ in
+                individual["rule_lib_chromosome"][mutation_pos_rule_lib:] = [random.randint(0, gene_num - 1) for _ in
                                                                              range(
-                                                                                 self.rulebase_chromosome_size - mutation_pos_rulebase)]
+                                                                                 self.rule_lib_chromosome_size - mutation_pos_rule_lib)]
 
                 """ 选取突变点，并将该点之后的全部基因段进行基因突变（隶属函数） """
                 mutation_pos_mf = random.randint(0, self.mf_chromosome_size - 1)
@@ -218,11 +227,12 @@ class BaseGFS(metaclass=ABCMeta):
                 individual["flag"] = 0
 
     def get_optimal_individual(self):
-        optimal_individual = self.population[0]
-        for i in range(1, len(self.population) - 1):
-            if self.population[i]['fitness'] > optimal_individual["fitness"]:
-                optimal_individual = self.population[i]
-        return optimal_individual
+        """
+        获取 fitness 最高的个体对象。
+        @return: 最优 Individual
+        """
+        sorted_population = sorted(self.population, key=lambda x: x["fitness"], reverse=True)
+        return sorted_population[0]
 
     def save_all_population(self, file_path: str):
         """
@@ -247,21 +257,20 @@ class BaseGFS(metaclass=ABCMeta):
         except:
             raise IOError("[ERROR] Open File Failed!")
 
-    def save_optimal_individual_to_file(self, path_rulebase, path_mf, optimal_individual):
+    def save_optimal_individual_to_file(self, path_rule_lib, path_mf, optimal_individual):
         """
         将得分值最高的个体（Individual）存入文件中。
-        @param path_rulebase: 规则库文件存放目录
+        @param path_rule_lib: 规则库文件存放目录
         @param path_mf: 隶属函数参数文件存放目录
         @param optimal_individual: 最优个体对象
         @return: None
         """
-        self.rule_lib.encode_by_chromosome(optimal_individual["rulebase_chromosome"])
-        self.rule_lib.save_rule_base_to_file(path_rulebase)
-        with open(path_mf, "w") as f:
-            mf_dict = {"mf_offset": optimal_individual["mf_chromosome"]}
-            json.dump(mf_dict, f)
+        self.rule_lib.encode_by_chromosome(optimal_individual["rule_lib_chromosome"])
+        self.rule_lib.save_rule_base_to_file(path_rule_lib)
+        self.rule_lib.save_mf_to_file(path_mf, optimal_individual)
 
-    def train(self, save_best_individual_path="TrainedFile", save_all_path="SavedAllPopulation", base_path="models") -> None:
+    def train(self, save_best_individual_path="TrainedFile", save_all_path="SavedAllPopulation",
+              base_path="models") -> None:
         """
         遗传算法训练函数。
         @param base_path: 模型存放总路径
@@ -289,7 +298,8 @@ class BaseGFS(metaclass=ABCMeta):
             self.save_all_population(os.path.join(save_all_path, "all_population{}.json".format(count)))
             optimal_individual = self.get_optimal_individual()
             self.save_optimal_individual_to_file(
-                os.path.join(save_best_individual_path, "RuleLib{}({}).json".format(count, optimal_individual["fitness"])),
+                os.path.join(save_best_individual_path,
+                             "RuleLib{}({}).json".format(count, optimal_individual["fitness"])),
                 os.path.join(save_best_individual_path, "MF{}({}).json".format(count, optimal_individual["fitness"])),
                 optimal_individual)
 
@@ -322,11 +332,12 @@ class BaseGFT(metaclass=ABCMeta):
 
     def init_population(self) -> None:
         """
-        种群初始化函数，初始化规定数目个个体（Individual），一个个体的染色体为二维数组，其中每一维代表一个特定规则库的染色体。
+        种群初始化函数，初始化规定数目个个体（Individual），一个个体的染色体为二维数组，
+        其中每一维代表一个特定规则库的染色体。
         @return: None
         """
         for i in range(self.population_size):
-            rulebase_chromosome = []
+            rule_lib_chromosome = []
             mf_chromosome = []
 
             fis_num = len(self.rule_lib_list)
@@ -337,58 +348,72 @@ class BaseGFT(metaclass=ABCMeta):
 
                 """ 将输出模糊变量的term按id数字化 """
                 genes = [term.id for term in output_terms]
-                all_term_list = [fuzzy_variable.all_term() for fuzzy_variable in self.rule_lib_list[index].fuzzy_variable_list]
-                current_rulebase_chromosome_size = len(self.rule_lib_list[index].rule_base)
+                all_term_list = [term for fuzzy_variable in self.rule_lib_list[index].fuzzy_variable_list
+                                 for term in fuzzy_variable.all_term()]
+                current_rule_lib_chromosome_size = len(self.rule_lib_list[index].rule_lib)
 
                 """ 默认使用三角隶属函数，因此隶属函数染色体长度等于隶属函数个数*3 """
                 current_mf_chromosome_size = len(all_term_list) * 3
-                current_rulebase_chromosome = [genes[random.randint(0, len(genes)-1)] for _ in range(current_rulebase_chromosome_size)]
+                current_rule_lib_chromosome = [genes[random.randint(0, len(genes) - 1)] for _ in
+                                               range(current_rule_lib_chromosome_size)]
                 current_mf_chromosome = [random.randint(-10, 10) for _ in range(current_mf_chromosome_size)]
 
                 """ 往个体的染色体中加入代表当前规则库的染色体 """
-                rulebase_chromosome.append(current_rulebase_chromosome)
+                rule_lib_chromosome.append(current_rule_lib_chromosome)
                 mf_chromosome.append(current_mf_chromosome)
 
-            individual = {"rulebase_chromosome": rulebase_chromosome, "mf_chromosome": mf_chromosome, "fitness": 0,
+            individual = {"rule_lib_chromosome": rule_lib_chromosome, "mf_chromosome": mf_chromosome, "fitness": 0,
                           "flag": 0, "average_fitness": []}
 
             self.population.append(individual)
 
-    def compute_fitness(self, individual: dict) -> float:
+    def compute_fitness(self, individual: dict, min_v=None, max_v=None, average_num=1) -> float:
         """
-        计算个体的适应值，需要先将个体的染色体解析成模糊规则库，构成FIS决策器，依据该决策器进行仿真，根据最终的仿真结果进行适应值计算，计算方式可以自定义。
+        计算个体的适应值，需要先将个体的染色体解析成模糊规则库，构成GFT中的FIS，依据该决策器进行仿真，根据最终的仿真结果进行适应值计算，计算方式可以自定义。
+        @param average_num: 取N次实验的实验结果作为返回值
+        @param max_v: 若要对reward进行clip，则设置该最大值，默认为None，不做clip
+        @param min_v: 若要对reward进行clip，则设置该最小值，默认为None，不做clip
         @param individual: 个体单位
         @return: 该个体的适应值
         """
-        rb = RuleLib(self.RB.fuzzy_variable_list)
-        rb.encode_by_chromosome(individual["rulebase_chromosome"])
-        rules = rb.decode()
-        new_fuzzy_variable_list = copy.deepcopy(self.RB.fuzzy_variable_list)
-        count = 0
-        for fuzzy_variable in new_fuzzy_variable_list:
-            for k, v in fuzzy_variable.terms.items():
-                if v.trimf[0] == v.trimf[1] and v.trimf[1] == v.trimf[2] and v.trimf[2] == 0:  # 类别型模糊变量
-                    continue
-                offset_value = v.span / 10
-                new_a = v.trimf[0] + individual["mf_chromosome"][count] * offset_value
-                new_b = v.trimf[1] + individual["mf_chromosome"][count + 1] * offset_value
-                new_c = v.trimf[2] + individual["mf_chromosome"][count + 2] * offset_value
-                new_tri = [new_a, new_b, new_c]
-                new_tri.sort()
-                count += 3
-                v.trimf = new_tri
+        gft_controller = []
+        for index, rule_lib in enumerate(self.rule_lib_list):
+            """ 将RuleLib中的数字编码染色体解析为包含多个Rule对象的列表 """
+            rl = RuleLib(rule_lib.fuzzy_variable_list)
+            rl.encode_by_chromosome(individual["rule_lib_chromosome"][index])
+            rules = rl.decode()
 
-        ds = DecisionSystem(new_fuzzy_variable_list, rules)
-        dss = DecisionSystemSimulation(ds)
-        sum_socre = 0
-        count = 0
-        average_num = 3
+            """ 对模糊变量的隶属函数参数进行重计算，根据染色体中的隶属函数偏移offset来更改隶属函数三角形的三个点坐标 """
+            new_fuzzy_variable_list = copy.deepcopy(rule_lib.fuzzy_variable_list)
+            count = 0
+            for fuzzy_variable in new_fuzzy_variable_list:
+                for k, v in fuzzy_variable.terms.items():
+                    if (v.trimf[0] == v.trimf[1] and v.trimf[1] == v.trimf[2] and v.trimf[2] == 0) or (
+                            v.trimf[0] == -666):  # 类别型模糊变量
+                        count += 3
+                        continue
+                    offset_value = v.span / 20
+                    new_a = v.trimf[0] + individual["mf_chromosome"][index][count] * offset_value
+                    new_b = v.trimf[1]
+                    new_c = v.trimf[2] + individual["mf_chromosome"][index][count + 2] * offset_value
+                    new_tri = [new_a, new_b, new_c]
+                    new_tri.sort()  # 因为平移有正有负，平移后可能会出现a点平移到了b点右边，但三角形的三个点不能乱序，因此需要按从小到大排序
+                    count += 3
+                    v.trimf = new_tri
 
-        """ 取三次实验的平均值作为最终结果 """
+            """ 构建FIS推理器 """
+            now_ds = DecisionSystem(new_fuzzy_variable_list, rules)
+            now_dss = DecisionSystemSimulation(now_ds)
+            gft_controller.append(now_dss)
+
+        sum_score = 0
+        """ 取N次实验平均值返回结果 """
         for i in range(average_num):
-            count += 1
-            sum_socre += self.start_simulation(dss)
-        return sum_socre / average_num
+            current_reward = self.start_simulation(gft_controller)
+            current_reward = min(min_v, current_reward) if min_v else current_reward  # 单局仿真最小值clip
+            current_reward = max(max_v, current_reward) if max_v else current_reward  # 单局仿真最大值clip
+            sum_score += current_reward
+        return sum_score
 
     def visualize_progress(self, epoch: int, total_epoch: int, step: int, total_step: int) -> None:
         """
@@ -401,7 +426,8 @@ class BaseGFT(metaclass=ABCMeta):
         """
         max_len = 40
         current_progress = int(step / total_step * 40)
-        print('\r[Epoch: %d/%d][' % (epoch, total_epoch) + '=' * current_progress + '-' * (max_len - current_progress) + ']', end='')
+        print('\r[Epoch: %d/%d][' % (epoch, total_epoch) + '=' * current_progress + '-' * (
+                max_len - current_progress) + ']', end='')
 
     def select(self, epoch: int, total_epoch: int) -> None:
         """
@@ -411,12 +437,16 @@ class BaseGFT(metaclass=ABCMeta):
         @return: None
         """
         sum_count = len(self.population)
+
+        """ 计算每一个个体的适应值fitness """
         for count, individual in enumerate(self.population):
             count += 1
             self.visualize_progress(epoch, total_epoch, count, sum_count)
             if individual["flag"] == 0:
                 individual["fitness"] = self.compute_fitness(individual)
                 individual["flag"] = 1
+
+        # TODO 完成多进程并行计算population中所有individual的fitness
 
         self.population = sorted(self.population, key=lambda x: x["fitness"])
         fitness_list = [x["fitness"] for x in self.population]
@@ -425,12 +455,14 @@ class BaseGFT(metaclass=ABCMeta):
 
         """ 按照概率分布选择出种群规模条染色体 """
         selected_population = np.random.choice(self.population, self.population_size, replace=False, p=fit_pro)
-        print("  Min Fitness: %.2f  |  Max Fitness: %.2f  |  Average Fitness: %.2f" % (min(fitness_list), max(fitness_list), sum_fitness / len(fitness_list)))
+        print("  Min Fitness: %.2f  |  Max Fitness: %.2f  |  Average Fitness: %.2f" % (
+            min(fitness_list), max(fitness_list), sum_fitness / len(fitness_list)))
         self.population = list(selected_population)
 
     def select_by_fitness(self) -> None:
         """
-        优胜劣汰算法，直接选择适应值较大的染色体保留，该方法是简化版的选择方法，建议使用select()函数。
+        优胜劣汰算法，直接选择适应值较大的染色体保留，该方法是简化版的选择方法，
+        建议使用select()函数。
         @return: None
         """
         for count, individual in enumerate(self.population):
@@ -449,24 +481,33 @@ class BaseGFT(metaclass=ABCMeta):
         """
         offspring = copy.deepcopy(parent)
 
-        """ 随机选择交换基因段的左右位点索引（规则库染色体） """
-        cross_left_position_rulebase = random.randint(0, self.rulebase_chromosome_size - 1)
-        cross_right_position_rulebase = random.randint(cross_left_position_rulebase, self.rulebase_chromosome_size - 1)
+        """ 对规则库列表中的每一个规则库进行交叉互换，但只能不同染色体上的相同规则库之间才能进行交叉，通过index来确保相同类型的规则库 """
+        for index, rule_lib in enumerate(self.rule_lib_list):
+            all_term_list = [copy.deepcopy(fuzzy_variable.all_term()) for fuzzy_variable in
+                             rule_lib.fuzzy_variable_list]
+            current_rule_lib_chromosome_size = len(rule_lib.rule_lib)
+            current_mf_chromosome_size = len(all_term_list) * 3
 
-        """ 交换子代对应位置的基因片段 """
-        offspring[0]["rulebase_chromosome"][cross_left_position_rulebase:cross_right_position_rulebase + 1], \
-            offspring[1]["rulebase_chromosome"][cross_left_position_rulebase:cross_right_position_rulebase + 1] = \
-            offspring[1]["rulebase_chromosome"][cross_left_position_rulebase:cross_right_position_rulebase + 1], \
-            offspring[0]["rulebase_chromosome"][cross_left_position_rulebase:cross_right_position_rulebase + 1]
+            """ 随机选择交换基因段的左右位点索引（规则库染色体） """
+            cross_left_position_rule_lib = random.randint(0, current_rule_lib_chromosome_size - 1)
+            cross_right_position_rule_lib = random.randint(cross_left_position_rule_lib, current_mf_chromosome_size - 1)
 
-        """ 随机选择交换基因段的左右位点索引（隶属函数染色体） """
-        cross_left_position_mf = random.randint(0, self.mf_chromosome_size - 1)
-        cross_right_position_mf = random.randint(cross_left_position_mf, self.mf_chromosome_size - 1)
+            """ 交换子代对应位置的基因片段 """
+            offspring[0]["rule_lib_chromosome"][index][cross_left_position_rule_lib:cross_right_position_rule_lib + 1], \
+            offspring[1]["rule_lib_chromosome"][index][cross_left_position_rule_lib:cross_right_position_rule_lib + 1] = \
+                offspring[1]["rule_lib_chromosome"][index][
+                cross_left_position_rule_lib:cross_right_position_rule_lib + 1], \
+                offspring[0]["rule_lib_chromosome"][index][
+                cross_left_position_rule_lib:cross_right_position_rule_lib + 1]
 
-        offspring[0]["mf_chromosome"][cross_left_position_mf:cross_right_position_mf + 1], \
-            offspring[1]["mf_chromosome"][cross_left_position_mf:cross_right_position_mf + 1] = \
-            offspring[1]["mf_chromosome"][cross_left_position_mf:cross_right_position_mf + 1], \
-            offspring[0]["mf_chromosome"][cross_left_position_mf:cross_right_position_mf + 1]
+            """ 随机选择交换基因段的左右位点索引（隶属函数染色体） """
+            cross_left_position_mf = random.randint(0, current_mf_chromosome_size - 1)
+            cross_right_position_mf = random.randint(cross_left_position_mf, current_mf_chromosome_size - 1)
+
+            offspring[0]["mf_chromosome"][index][cross_left_position_mf:cross_right_position_mf + 1], \
+            offspring[1]["mf_chromosome"][index][cross_left_position_mf:cross_right_position_mf + 1] = \
+                offspring[1]["mf_chromosome"][index][cross_left_position_mf:cross_right_position_mf + 1], \
+                offspring[0]["mf_chromosome"][index][cross_left_position_mf:cross_right_position_mf + 1]
 
         """ 新的子代没有被Simulation过，flag置为0，代表需要通过simulation后来计算适应值fitness """
         offspring[0]["flag"] = 0
@@ -475,7 +516,8 @@ class BaseGFT(metaclass=ABCMeta):
 
     def cross(self) -> None:
         """
-        将一个种群（population）中的所有个体（Individual）按概率进行交叉互换，并将子代添加入当前种群中。
+        将一个种群（population）中的所有个体（Individual）按概率进行交叉互换，
+        并将子代添加入当前种群中。
         @return: None
         """
         offspring = []
@@ -491,32 +533,50 @@ class BaseGFT(metaclass=ABCMeta):
 
     def mutate(self) -> None:
         """
-        基因变异函数，对种群中每一个个体（Individual），随机选择染色体中的某一段，对该段中的每一个基因执行一次基因突变。
+        基因变异函数，对种群中每一个个体（Individual），随机选择染色体中的某一段，
+        对该段中的每一个基因执行一次基因突变。
         @return: None
         """
         for individual in self.population:
             pro = random.random()
-            if pro < self.mutation_pro:
-                """ 选取突变点，并将该点之后的全部基因段进行基因突变（规则库） """
-                mutation_pos_rulebase = random.randint(0, self.rulebase_chromosome_size - 1)
-                gene_num = len(self.genes)
-                individual["rulebase_chromosome"][mutation_pos_rulebase:] = [random.randint(0, gene_num - 1) for _ in
-                                                                             range(
-                                                                                 self.rulebase_chromosome_size - mutation_pos_rulebase)]
 
-                """ 选取突变点，并将该点之后的全部基因段进行基因突变（隶属函数） """
-                mutation_pos_mf = random.randint(0, self.mf_chromosome_size - 1)
-                individual["mf_chromosome"][mutation_pos_mf:] = [random.randint(-10, 10) for _ in
-                                                                 range(self.mf_chromosome_size - mutation_pos_mf)]
+            """ 对每一个规则库都要进行突变 """
+            if pro < self.mutation_pro:
+                for index, rule_lib in enumerate(self.rule_lib_list):
+                    output_fuzzy_variable = rule_lib.fuzzy_variable_list[-1]
+                    output_terms = output_fuzzy_variable.all_term()
+                    genes = [term.id for term in output_terms]
+                    all_term_list = [term for fuzzy_variable in self.rule_lib_list[index].fuzzy_variable_list
+                                     for term in fuzzy_variable.all_term()]
+
+                    current_rule_lib_chromosome_size = len(rule_lib.rule_lib)
+                    current_mf_chromosome_size = len(all_term_list) * 3
+
+                    """ 选取突变点，并将该点之后的全部基因段进行基因突变（规则库） """
+                    mutation_pos_rule_lib = random.randint(0, current_rule_lib_chromosome_size - 1)
+                    gene_num = len(genes)
+                    individual["rule_lib_chromosome"][index][mutation_pos_rule_lib:] = [random.randint(0, gene_num - 1)
+                                                                                        for _ in
+                                                                                        range(
+                                                                                            current_rule_lib_chromosome_size -
+                                                                                            mutation_pos_rule_lib)]
+
+                    """ 选取突变点，并将该点之后的全部基因段进行基因突变（隶属函数） """
+                    mutation_pos_mf = random.randint(0, current_mf_chromosome_size - 1)
+                    individual["mf_chromosome"][index][mutation_pos_mf:] = [random.randint(-10, 10) for _ in
+                                                                            range(
+                                                                                current_mf_chromosome_size - mutation_pos_mf)]
+
                 """ 变异后的个体flag需被重置 """
                 individual["flag"] = 0
 
     def get_optimal_individual(self):
-        optimal_individual = self.population[0]
-        for i in range(1, len(self.population) - 1):
-            if self.population[i]['fitness'] > optimal_individual["fitness"]:
-                optimal_individual = self.population[i]
-        return optimal_individual
+        """
+        获取 fitness 最高的个体对象。
+        @return: 最优 Individual
+        """
+        sorted_population = sorted(self.population, key=lambda x: x["fitness"], reverse=True)
+        return sorted_population[0]
 
     def save_all_population(self, file_path: str):
         """
@@ -541,21 +601,26 @@ class BaseGFT(metaclass=ABCMeta):
         except:
             raise IOError("[ERROR] Open File Failed!")
 
-    def save_optimal_individual_to_file(self, path_rulebase, path_mf, optimal_individual):
+    def save_optimal_individual_to_file(self, path_rule_lib, path_mf, optimal_individual):
         """
         将得分值最高的个体（Individual）存入文件中。
-        @param path_rulebase: 规则库文件存放目录
-        @param path_mf: 隶属函数参数文件存放目录
+        @param path_rule_lib: 规则库文件存放目录（不包含文件后缀名）
+        @param path_mf: 隶属函数参数文件存放目录（不包含文件后缀名）
         @param optimal_individual: 最优个体对象
         @return: None
         """
-        self.RB.encode_by_chromosome(optimal_individual["rulebase_chromosome"])
-        self.RB.save_rule_base_to_file(path_rulebase)
-        with open(path_mf, "w") as f:
-            mf_dict = {"mf_offset": optimal_individual["mf_chromosome"]}
-            json.dump(mf_dict, f)
+        for index, rule_lib in enumerate(self.rule_lib_list):
+            """ 将每一个规则库存分别放入不同的文件中，文件名中包含规则库编号，如：RuleLib[No.1]，代表1号规则库 """
+            current_path_rule_lib = path_rule_lib + "_[No." + str(index) + "].json"
+            current_path_mf = path_mf + "_[No." + str(index) + "].json"
+            rule_lib.encode_by_chromosome(optimal_individual["rule_lib_chromosome"][index])
 
-    def train(self, save_best_individual_path="TrainedFile", save_all_path="SavedAllPopulation", base_path="models") -> None:
+            """ 将规则库和隶属函数均保存到本地 """
+            rule_lib.save_rule_base_to_file(current_path_rule_lib)
+            rule_lib.save_mf_to_file(current_path_mf, optimal_individual)
+
+    def train(self, save_best_individual_path="TrainedFile", save_all_path="SavedAllPopulation",
+              base_path="models") -> None:
         """
         遗传算法训练函数。
         @param base_path: 模型存放总路径
@@ -583,15 +648,16 @@ class BaseGFT(metaclass=ABCMeta):
             self.save_all_population(os.path.join(save_all_path, "all_population{}.json".format(count)))
             optimal_individual = self.get_optimal_individual()
             self.save_optimal_individual_to_file(
-                os.path.join(save_best_individual_path, "RuleLib{}({}).json".format(count, optimal_individual["fitness"])),
-                os.path.join(save_best_individual_path, "MF{}({}).json".format(count, optimal_individual["fitness"])),
+                os.path.join(save_best_individual_path,
+                             "[Epoch_{}]RuleLib({:.1f})".format(count, optimal_individual["fitness"])),
+                os.path.join(save_best_individual_path, "[Epoch_{}]MF({:.1f})".format(count, optimal_individual["fitness"])),
                 optimal_individual)
 
     @abstractmethod
-    def start_simulation(self, simulator: DecisionSystemSimulation) -> float:
+    def start_simulation(self, simulators: list) -> float:
         """
         仿真器，用于根据FIS决策器的行为决策更新，获取并返回fitness。
-        @param simulator: 继承自DecisionSystemSimulation的仿真器对象
+        @param simulators: 继承自DecisionSystemSimulation的仿真器对象
         @return: 适应值
         """
         pass
@@ -599,4 +665,3 @@ class BaseGFT(metaclass=ABCMeta):
 
 if __name__ == '__main__':
     print("Hello GFS!")
-
