@@ -17,16 +17,16 @@ class DecisionSystemSimulation(object):
         :param input: 输入模糊变量的具体数值
         :return: 输出动作的枚举ID
         """
-        rule_base = self.decision_system.rule_lib # 先获得FIS的规则库
+        rule_lib = self.decision_system.rule_lib  # 先获得FIS的规则库
         fuzzy_variable_len = len(self.decision_system.fuzzy_variable_list)
-        input_fuzzy_variable = self.decision_system.fuzzy_variable_list[0:fuzzy_variable_len - 1] #输入模糊变量
-        output_fuzzy_variable = self.decision_system.fuzzy_variable_list[fuzzy_variable_len - 1] #输出模糊变量
+        input_fuzzy_variable = self.decision_system.fuzzy_variable_list[0:fuzzy_variable_len - 1]  # 输入模糊变量
+        output_fuzzy_variable = self.decision_system.fuzzy_variable_list[fuzzy_variable_len - 1]  # 输出模糊变量
         action_num = len(output_fuzzy_variable.terms)
         action_value = [0 for index in range(0, action_num)]
-        for rule in rule_base:
+        for rule in rule_lib:
             antecedent = rule.antecedent
             consequent = rule.consequent
-            strength = antecedent.compute_value(input) #计算规则强度
+            strength = antecedent.compute_value(input)  # 计算规则强度
             action_id = consequent.clause.id
             if action_id == -1:
                 continue
@@ -91,7 +91,8 @@ class DecisionSystemSimulation(object):
             mf_value.append([])
         for index_universe in range(0, len(final_universe)):
             for index_action in range(0, action_num):
-                mf_value[index_action].append(output_terms_list[index_action].compute_membership_value(final_universe[index_universe]))
+                mf_value[index_action].append(
+                    output_terms_list[index_action].compute_membership_value(final_universe[index_universe]))
 
         output_distribution = []
         max_clip = max(clip_value)
@@ -115,11 +116,12 @@ class DecisionSystemSimulation(object):
         for index_universe in range(0, len(final_universe)):
             Max = 0
             for index_action in range(0, action_num):
-               mf_value[index_action][index_universe] = min(mf_value[index_action][index_universe], clip_value[index_action])
-               Max = max(Max, mf_value[index_action][index_universe])
+                mf_value[index_action][index_universe] = min(mf_value[index_action][index_universe],
+                                                             clip_value[index_action])
+                Max = max(Max, mf_value[index_action][index_universe])
             output_distribution.append(Max)
 
-        #使用mean of maximum去模糊化分布
+        # 使用mean of maximum去模糊化分布
         Max = 0
         for value in output_distribution:
             Max = max(Max, value)

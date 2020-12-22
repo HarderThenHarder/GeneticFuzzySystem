@@ -5,9 +5,9 @@
 import json
 import random
 import copy
-from GFS.FIS.RuleLib import RuleLib
-from GFS.FIS.DecisionSystem import DecisionSystem
-from GFS.FIS.DecisionSystemSimulation import DecisionSystemSimulation
+from .FIS.RuleLib import RuleLib
+from .FIS.DecisionSystem import DecisionSystem
+from .FIS.DecisionSystemSimulation import DecisionSystemSimulation
 import os
 import numpy as np
 from abc import ABCMeta, abstractmethod
@@ -380,7 +380,7 @@ class BaseGFT(metaclass=ABCMeta):
         @param individual: 个体单位
         @return: 该个体的适应值
         """
-        gft_controller = []
+        gft_controllers = []
         for index, rule_lib in enumerate(self.rule_lib_list):
             """ 将RuleLib中的数字编码染色体解析为包含多个Rule对象的列表 """
             rl = RuleLib(rule_lib.fuzzy_variable_list)
@@ -408,12 +408,12 @@ class BaseGFT(metaclass=ABCMeta):
             """ 构建FIS推理器 """
             now_ds = DecisionSystem(new_fuzzy_variable_list, rules)
             now_dss = DecisionSystemSimulation(now_ds)
-            gft_controller.append(now_dss)
+            gft_controllers.append(now_dss)
 
         sum_score = 0
         """ 取N次实验平均值返回结果 """
         for i in range(average_num):
-            current_reward = self.start_simulation(gft_controller)
+            current_reward = self.start_simulation(gft_controllers)
             current_reward = min(min_v, current_reward) if min_v else current_reward  # 单局仿真最小值clip
             current_reward = max(max_v, current_reward) if max_v else current_reward  # 单局仿真最大值clip
             sum_score += current_reward
@@ -494,7 +494,7 @@ class BaseGFT(metaclass=ABCMeta):
 
             """ 随机选择交换基因段的左右位点索引（规则库染色体） """
             cross_left_position_rule_lib = random.randint(0, current_rule_lib_chromosome_size - 1)
-            cross_right_position_rule_lib = random.randint(cross_left_position_rule_lib, current_mf_chromosome_size - 1)
+            cross_right_position_rule_lib = random.randint(cross_left_position_rule_lib, current_rule_lib_chromosome_size - 1)
 
             """ 交换子代对应位置的基因片段 """
             offspring[0]["rule_lib_chromosome"][index][cross_left_position_rule_lib:cross_right_position_rule_lib + 1], \
@@ -642,6 +642,7 @@ class BaseGFT(metaclass=ABCMeta):
         if not os.path.exists(save_all_path):
             os.mkdir(save_all_path)
 
+        print("\nStart to Initialize Rule Lib...")
         self.init_population()
         print("\nFinished Initialized Rule Lib, Start to train...\n")
         for count in range(self.episode):

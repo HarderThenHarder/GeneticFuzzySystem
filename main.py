@@ -86,16 +86,16 @@ def test_GFT():
     service = FuzzyVariable([0, 10], 'service')
     tip = FuzzyVariable([0, 25], 'tip')
 
+    """ 自动分配隶属函数 """
     quality.automf(3)
     service.automf(3)
 
-    tip['low'] = Term('low', 'tip', [-13, 0, 13], 0)
-    tip['medium'] = Term('medium', 'tip', [0, 13, 25], 1)
-    tip['high'] = Term('high', 'tip', [13, 25, 38], 2)
+    """ 自动分配带特殊情况的隶属函数 """
+    tip.automf(5, special_case=True, special_mf_abc=[4000, 1000, 15000])
 
     """ 传入一个规则库列表，代表存在多个规则库，一个规则库决策一种特定行为 """
     rule_lib_list = [RuleLib([quality, service, tip]), RuleLib([quality, service, tip])]
-    ga_test = GFT(rule_lib_list=rule_lib_list, population_size=6, episode=10, mutation_pro=0.99, cross_pro=0.9)
+    ga_test = GFT(rule_lib_list=rule_lib_list, population_size=6, episode=100, mutation_pro=0.99, cross_pro=0.9)
     ga_test.train()
 
 

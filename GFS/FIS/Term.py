@@ -20,12 +20,12 @@ class TermPrimitive(object):
 
 
 class Term(TermPrimitive):
-    def __init__(self, label, parent, trimf, id):
-        self.label = label #标签
-        self.parent = parent #标签的父变量
-        self.trimf = trimf #三角形隶属函数的三个顶点
+    def __init__(self, label: str, parent: str, trimf: list, id: int):
+        self.label = label  # 标签
+        self.parent = parent  # 标签的父变量
+        self.trimf = trimf  # 三角形隶属函数的三个顶点
         self.span = max(trimf[1] - trimf[0], trimf[2] - trimf[1])
-        self.id = id #term编号
+        self.id = id  # term编号
 
     def compute_membership_value(self, value):
         """
@@ -36,7 +36,7 @@ class Term(TermPrimitive):
         a = self.trimf[0]
         b = self.trimf[1]
         c = self.trimf[2]
-        if a == b and b == c and a == 0:# 类别型模糊变量
+        if a == b and b == c and a == 0:  # 类别型模糊变量
             if value == self.id:
                 return 1
             else:
@@ -151,4 +151,3 @@ class TermAggregate(TermPrimitive):
             return term1_string + ' AND ' + term2_string
         if self.kind == 'or':
             return term1_string + ' OR ' + term2_string
-

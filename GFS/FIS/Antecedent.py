@@ -1,5 +1,5 @@
-from GFS.FIS.Term import Term
-from GFS.FIS.Term import TermAggregate
+from .Term import Term
+from .Term import TermAggregate
 
 
 class Antecedent(object):

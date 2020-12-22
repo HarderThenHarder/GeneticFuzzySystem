@@ -1,9 +1,9 @@
 import json
 import random
 import copy
-from GFS.FIS.Antecedent import Antecedent
-from GFS.FIS.Consequent import Consequent
-from GFS.FIS.Rule import Rule
+from .Antecedent import Antecedent
+from .Consequent import Consequent
+from .Rule import Rule
 
 
 class RuleLib(object):
