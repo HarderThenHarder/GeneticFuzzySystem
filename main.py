@@ -12,7 +12,7 @@ import random
 
 class GFS(BaseGFS):
 
-    def __init__(self, rule_lib, population_size, episode, mutation_pro=0.01, cross_pro=0.9):
+    def __init__(self, rule_lib, population_size, episode, mutation_pro=0.01, cross_pro=0.9, simulator=None):
         """
         实现自定义GFS子类（继承自BaseGFS基类）并实现自定义计算仿真方法。
         @param rule_lib: 规则库对象
@@ -21,7 +21,7 @@ class GFS(BaseGFS):
         @param mutation_pro: 变异概率
         @param cross_pro: 交叉概率
         """
-        super().__init__(rule_lib, population_size, episode, mutation_pro, cross_pro)
+        super().__init__(rule_lib, population_size, episode, mutation_pro, cross_pro, simulator)
 
     """ 实现父类抽象方法 """
     def start_simulation(self, simulator: DecisionSystemSimulation) -> float:
