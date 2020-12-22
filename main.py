@@ -55,16 +55,17 @@ def test_GFS():
 
 class GFT(BaseGFT):
 
-    def __init__(self, rule_lib, population_size, episode, mutation_pro=0.01, cross_pro=0.9):
+    def __init__(self, rule_lib_list, population_size, episode, mutation_pro=0.01, cross_pro=0.9, simulator=None):
         """
         实现自定义GFT子类（继承自BaseGFT基类）并实现自定义计算仿真方法。
-        @param rule_lib: 规则库对象
+        @param rule_lib_list: 规则库对象
         @param population_size: 种群规模（存在的染色体条数，可以理解为存在的规则库个数）
         @param episode: 训练多少轮
         @param mutation_pro: 变异概率
         @param cross_pro: 交叉概率
+        @param simulator: 仿真器对象，用于获取观测和回报
         """
-        super().__init__(rule_lib, population_size, episode, mutation_pro, cross_pro)
+        super().__init__(rule_lib_list, population_size, episode, mutation_pro, cross_pro, simulator)
 
     """ 实现父类抽象方法 """
     def start_simulation(self, simulators: list) -> float:
@@ -82,19 +83,19 @@ def test_GFT():
     @return: None
     """
     quality = FuzzyVariable([0, 10], 'quality')
-    servive = FuzzyVariable([0, 10], 'service')
+    service = FuzzyVariable([0, 10], 'service')
     tip = FuzzyVariable([0, 25], 'tip')
 
     quality.automf(3)
-    servive.automf(3)
+    service.automf(3)
 
     tip['low'] = Term('low', 'tip', [-13, 0, 13], 0)
     tip['medium'] = Term('medium', 'tip', [0, 13, 25], 1)
     tip['high'] = Term('high', 'tip', [13, 25, 38], 2)
 
     """ 传入一个规则库列表，代表存在多个规则库，一个规则库决策一种特定行为 """
-    rule_lib_list = [RuleLib([quality, servive, tip]), RuleLib([quality, servive, tip])]
-    ga_test = GFT(rule_lib=rule_lib_list, population_size=6, episode=10, mutation_pro=0.99, cross_pro=0.9)
+    rule_lib_list = [RuleLib([quality, service, tip]), RuleLib([quality, service, tip])]
+    ga_test = GFT(rule_lib_list=rule_lib_list, population_size=6, episode=10, mutation_pro=0.99, cross_pro=0.9)
     ga_test.train()
 
 

@@ -65,13 +65,15 @@ class FuzzyVariable(object):
             raise ValueError("Unknown Type")
         self.terms[key] = item
 
-    def automf(self, number=5, variable_type='quality', names=None):
+    def automf(self, number=5, variable_type='quality', names=None, special_case=False, special_mf_abc=None, special_case_name="special_case"):
         """
         生成指定数量的Term，其隶属函数默认为三角型隶属函数
-        :param number: 生成的Term数量，默认值为5
-        :param variable_type: 质量型或者数量型(quality, quant)
-        :param names: 相应Term的名字，其数量应该与number相同
-        :return:
+        @param number: 生成的Term数量（不包括特殊隶属类），默认值为5
+        @param variable_type: 质量型或者数量型(quality, quant)
+        @param names: 相应Term的名字，其数量应该与number相同
+        @param special_mf_abc: 特殊隶属类的三角形顶点值
+        @param special_case: 是否自动分配特殊隶属类
+        @param special_case_name: 特殊隶属类的名称，默认为 special_case
         """
         if names is not None:
             # set number based on names passed
@@ -116,6 +118,12 @@ class FuzzyVariable(object):
 
         # Clear existing adjectives, if any
         self.terms = OrderedDict()
+
+        """ 若存在特殊隶属类，则将特殊隶属类添加到最后一项 """
+        if special_case:
+            assert special_mf_abc, "[ERROR] You must specify the special_mf_abc value for special mf function."
+            names.append(special_case_name)
+            abcs.append(special_mf_abc)
 
         # Repopulate
         index = 0
