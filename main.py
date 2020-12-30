@@ -2,60 +2,15 @@
 @Author: P_k_y
 @Time: 2020/12/16
 """
-from GFS.FIS.DecisionSystemSimulation import DecisionSystemSimulation
 from GFS.FIS.FuzzyVariable import FuzzyVariable
 from GFS.FIS.RuleLib import RuleLib
-from GFS.FIS.Term import Term
-from GFS.GeneticFuzzySystem import BaseGFS, BaseGFT
-import random
-
-
-class GFS(BaseGFS):
-
-    def __init__(self, rule_lib, population_size, episode, mutation_pro=0.01, cross_pro=0.9, simulator=None):
-        """
-        实现自定义GFS子类（继承自BaseGFS基类）并实现自定义计算仿真方法。
-        @param rule_lib: 规则库对象
-        @param population_size: 种群规模（存在的染色体条数，可以理解为存在的规则库个数）
-        @param episode: 训练多少轮
-        @param mutation_pro: 变异概率
-        @param cross_pro: 交叉概率
-        """
-        super().__init__(rule_lib, population_size, episode, mutation_pro, cross_pro, simulator)
-
-    """ 实现父类抽象方法 """
-    def start_simulation(self, simulator: DecisionSystemSimulation) -> float:
-        """
-        根据指定的simulator列表计算出一次仿真后的fitness。
-        @param simulator: DecisionSystemSimulation对象
-        @return: 返回fitness值
-        """
-        return random.randint(0, 1000)
-
-
-def test_GFS():
-    """
-    GFS类测试函数。
-    @return: None
-    """
-    quality = FuzzyVariable([0, 10], 'quality')
-    servive = FuzzyVariable([0, 10], 'service')
-    tip = FuzzyVariable([0, 25], 'tip')
-
-    quality.automf(3)
-    servive.automf(3)
-
-    tip['low'] = Term('low', 'tip', [-13, 0, 13], 0)
-    tip['medium'] = Term('medium', 'tip', [0, 13, 25], 1)
-    tip['high'] = Term('high', 'tip', [13, 25, 38], 2)
-    test_rb = RuleLib([quality, servive, tip])
-    ga_test = GFS(rule_lib=test_rb, population_size=6, episode=50, mutation_pro=0.01, cross_pro=0.9)
-    ga_test.train()
+from GFS.GeneticFuzzySystem import BaseGFT
+import gym
 
 
 class GFT(BaseGFT):
 
-    def __init__(self, rule_lib_list, population_size, episode, mutation_pro=0.01, cross_pro=0.9, simulator=None):
+    def __init__(self, rule_lib_list, population_size, episode, mutation_pro, cross_pro, simulator, parallelized):
         """
         实现自定义GFT子类（继承自BaseGFT基类）并实现自定义计算仿真方法。
         @param rule_lib_list: 规则库对象
@@ -64,41 +19,76 @@ class GFT(BaseGFT):
         @param mutation_pro: 变异概率
         @param cross_pro: 交叉概率
         @param simulator: 仿真器对象，用于获取观测和回报
+        @param parallelized: 是否启用多进程并行计算
         """
-        super().__init__(rule_lib_list, population_size, episode, mutation_pro, cross_pro, simulator)
+        super().__init__(rule_lib_list, population_size, episode, mutation_pro, cross_pro, simulator, parallelized)
 
     """ 实现父类抽象方法 """
-    def start_simulation(self, simulators: list) -> float:
+    def start_simulation(self, controllers: list, simulator) -> float:
         """
-        根据指定的simulator列表计算出一次仿真后的fitness。
-        @param simulators: DecisionSystemSimulation对象列表
-        @return: 返回fitness值
+        自定义 GFT 算法模块与仿真器 Simulator（gym） 之间的数据交互过程，返回仿真器的 reward 值。
+        @param simulator: 仿真器对象
+        @param controllers: 控制器列表，一个controller决策一个行为。
+        @return: fitness
         """
-        return random.randint(0, 1000)
+        controller = controllers[0]
+        fitness = 0
+
+        obs_list = simulator.reset()
+        for _ in range(1000):
+
+            # simulator.render()
+
+            """ CartPole-v0 中共包含 4 个观测，在FIS决策器中需要对应拆分成 4 个模糊变量输入 """
+            obs_input = {
+                "obs1": obs_list[0],
+                "obs2": obs_list[1],
+                "obs3": obs_list[2],
+                "obs4": obs_list[3]
+            }
+
+            action = controller.simulation_get_action(obs_input)    # 利用 FIS 决策器获得行为决策
+            obs_list, r, done, _ = simulator.step(action)
+            fitness += r
+
+            if done:
+                break
+
+        return fitness
 
 
-def test_GFT():
+def create_gft(simulator) -> GFT:
     """
-    GFT类测试函数。
-    @return: None
+    建立GFT对象，根据具体场景建立模糊变量与规则库。
+    @return: GFT对象
     """
-    quality = FuzzyVariable([0, 10], 'quality')
-    service = FuzzyVariable([0, 10], 'service')
-    tip = FuzzyVariable([0, 25], 'tip')
 
-    """ 自动分配隶属函数 """
-    quality.automf(3)
-    service.automf(3)
+    """ 1. 构建模糊变量，采用 gym 中 CartPole-v0 作为示例，共包含 4 个观测输入，1 个行为输出 """
+    obs1 = FuzzyVariable([-4.9, 4.9], "obs1")
+    obs2 = FuzzyVariable([-3.40e+38, 3.40e+38], "obs2")
+    obs3 = FuzzyVariable([-0.418, 0.418], "obs3")
+    obs4 = FuzzyVariable([-4.18e-01, 4.18e-01], "obs4")
 
-    """ 自动分配带特殊情况的隶属函数 """
-    tip.automf(5, special_case=True, special_mf_abc=[4000, 1000, 15000])
+    action = FuzzyVariable([0, 1], "action")
 
-    """ 传入一个规则库列表，代表存在多个规则库，一个规则库决策一种特定行为 """
-    rule_lib_list = [RuleLib([quality, service, tip]), RuleLib([quality, service, tip])]
-    ga_test = GFT(rule_lib_list=rule_lib_list, population_size=6, episode=100, mutation_pro=0.99, cross_pro=0.9)
-    ga_test.train()
+    """ 2. 为模糊变量分配隶属函数 """
+    obs1.automf(5)
+    obs2.automf(5)
+    obs3.automf(5)
+    obs4.automf(5)
+    action.automf(2, discrete=True)     # 行为输出是离散型的模糊变量
+
+    """ 3. 构建 RuleLib 规则库 """
+    controller = RuleLib([obs1, obs2, obs3, obs4, action])
+
+    """ 4. 构建 GFT 对象 """
+    return GFT(rule_lib_list=[controller], population_size=20, episode=200, mutation_pro=0.1, cross_pro=0.9,
+               simulator=simulator, parallelized=False)
 
 
 if __name__ == '__main__':
-    # test_GFS()
-    test_GFT()
+    env = gym.make('CartPole-v0')
+
+    gft = create_gft(env)
+    gft.train()
+    # gft.evaluate("models/OptimalIndividuals/[Epoch_47]Individual(144.0).json")

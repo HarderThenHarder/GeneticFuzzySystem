@@ -127,6 +127,16 @@ class RuleLib(object):
             self.rule_lib = rule_base_dict["RuleLib"]
             self.chromosome = rule_base_dict["chromosome"]
 
+    def save_individual_to_file(self, filepath, individual: dict):
+        """
+        将最优个体保存成本地文件
+        :param individual: 个体对象
+        :param filepath: 保存文件的路径
+        :return: None
+        """
+        with open(filepath, "w") as f:
+            json.dump(individual, f)
+
     def save_rule_base_to_file(self, filepath):
         """
         将规则库保存成本地文件

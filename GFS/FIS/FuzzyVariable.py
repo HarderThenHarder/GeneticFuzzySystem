@@ -65,72 +65,86 @@ class FuzzyVariable(object):
             raise ValueError("Unknown Type")
         self.terms[key] = item
 
-    def automf(self, number=5, variable_type='quality', names=None, special_case=False, special_mf_abc=None, special_case_name="special_case"):
+    def automf(self, number=5, variable_type='quantity', discrete=False, names=None, special_case=False, special_mf_abc=None, special_case_name="special_case"):
         """
         生成指定数量的Term，其隶属函数默认为三角型隶属函数
+        @param discrete: 该变量是否为离散型变量，如代表类别型的变量只能取（1，2，3），不能取 1.33
         @param number: 生成的Term数量（不包括特殊隶属类），默认值为5
-        @param variable_type: 质量型或者数量型(quality, quant)
+        @param variable_type: 质量型或者数量型(quality, quantity)
         @param names: 相应Term的名字，其数量应该与number相同
         @param special_mf_abc: 特殊隶属类的三角形顶点值
         @param special_case: 是否自动分配特殊隶属类
         @param special_case_name: 特殊隶属类的名称，默认为 special_case
         """
-        if names is not None:
-            # set number based on names passed
-            number = len(names)
-        else:
-            if number not in [3, 5, 7]:
-                raise ValueError("If number is not 3, 5, or 7, "
-                                 "you must pass a list of names "
-                                 "equal in length to number.")
-
-            if variable_type.lower() == 'quality':
-                names = ['dismal',
-                         'poor',
-                         'mediocre',
-                         'average',
-                         'decent',
-                         'good',
-                         'excellent']
+        if not discrete:
+            if names is not None:
+                # set number based on names passed
+                number = len(names)
             else:
-                names = ['lowest',
-                         'lower',
-                         'low',
-                         'average',
-                         'high',
-                         'higher',
-                         'highest']
+                if number not in [3, 5, 7]:
+                    raise ValueError("If number is not 3, 5, or 7, "
+                                     "you must pass a list of names "
+                                     "equal in length to number.")
 
-            if number == 3:
                 if variable_type.lower() == 'quality':
-                    names = names[1:6:2]
+                    names = ['dismal',
+                             'poor',
+                             'mediocre',
+                             'average',
+                             'decent',
+                             'good',
+                             'excellent']
                 else:
-                    names = names[2:5]
-            if number == 5:
-                names = names[1:6]
+                    names = ['lowest',
+                             'lower',
+                             'low',
+                             'average',
+                             'high',
+                             'higher',
+                             'highest']
 
-        limits = [self.universe_down, self.universe_up]
-        universe_range = limits[1] - limits[0]
-        widths = [universe_range / ((number - 1) / 2.)] * int(number)
-        centers = np.linspace(limits[0], limits[1], number)
+                if number == 3:
+                    if variable_type.lower() == 'quality':
+                        names = names[1:6:2]
+                    else:
+                        names = names[2:5]
+                if number == 5:
+                    names = names[1:6]
 
-        abcs = [[c - w / 2, c, c + w / 2] for c, w in zip(centers, widths)]
+            limits = [self.universe_down, self.universe_up]
+            universe_range = limits[1] - limits[0]
+            widths = [universe_range / ((number - 1) / 2.)] * int(number)
+            centers = np.linspace(limits[0], limits[1], number)
 
-        # Clear existing adjectives, if any
-        self.terms = OrderedDict()
+            abcs = [[c - w / 2, c, c + w / 2] for c, w in zip(centers, widths)]
 
-        """ 若存在特殊隶属类，则将特殊隶属类添加到最后一项 """
-        if special_case:
-            assert special_mf_abc, "[ERROR] You must specify the special_mf_abc value for special mf function."
-            names.append(special_case_name)
-            abcs.append(special_mf_abc)
+            # Clear existing adjectives, if any
+            self.terms = OrderedDict()
 
-        # Repopulate
-        index = 0
-        for name, abc in zip(names, abcs):
-            term = Term(name, self.label, abc, index)
-            index += 1
-            self[name] = term
+            """ 若存在特殊隶属类，则将特殊隶属类添加到最后一项 """
+            if special_case:
+                assert special_mf_abc, "[ERROR] You must specify the special_mf_abc value for special mf function."
+                names.append(special_case_name)
+                abcs.append(special_mf_abc)
+
+            # Repopulate
+            index = 0
+            for name, abc in zip(names, abcs):
+                term = Term(name, self.label, abc, index)
+                index += 1
+                self[name] = term
+        else:
+            abcs = [[0, 0, 0] for _ in range(number)]
+
+            index = 0
+            for abc in abcs:
+                name = str(index)
+                term = Term(name, self.label, abc, index)
+                index += 1
+                self[name] = term
+
+            if special_case:
+                self[special_case_name] = Term(special_case_name, self.label, [0, 0, 0], index)
 
     def show(self):
         color = ['red', 'green', 'blue']
