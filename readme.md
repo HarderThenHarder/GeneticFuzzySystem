@@ -101,7 +101,7 @@ if __name__ == '__main__':
 
 运行主函数（main.py），程序运行示意图如下：
 
-<div align=center><img src="assets/GFS.gif" width=700></div>
+<div align=center><img src="assets/GFS.gif" width=800></div>
 
 
 
@@ -146,7 +146,7 @@ MF 文件中的数据内容如下：
 
 训练过程中的训练曲线保存在：`./models/tarin_log.png`：
 
-<div align=center><img src="assets/train_log.png"></div>
+<div align=center><img src="assets/train_log.png" width=500></div>
 
 > 3. pretrained 模型加载
 
@@ -180,4 +180,4 @@ gft.evaluate("models/OptimalIndividuals/[Epoch_47]Individual(144.0).json")
 
 得到如下窗口：
 
-<div align=center><img src="assets/gym_demo.gif" width=600></div>
+<div align=center><img src="assets/gym_demo.gif" width=500></div>
