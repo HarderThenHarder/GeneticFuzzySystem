@@ -51,6 +51,12 @@ class GFT(BaseGFT):
             obs_list, r, done, _ = simulator.step(action)
             fitness += r
 
+            """ Reward Shaping: 若杆子与垂直面夹角越小则得分越高 """
+            angle = abs(obs_list[2])
+            r_shaping = (0.418 - angle) / 0.418
+
+            fitness += r_shaping
+
             if done:
                 break
 
@@ -82,7 +88,7 @@ def create_gft(simulator) -> GFT:
     controller = RuleLib([obs1, obs2, obs3, obs4, action])
 
     """ 4. 构建 GFT 对象 """
-    return GFT(rule_lib_list=[controller], population_size=20, episode=200, mutation_pro=0.1, cross_pro=0.9,
+    return GFT(rule_lib_list=[controller], population_size=40, episode=200, mutation_pro=0.1, cross_pro=0.9,
                simulator=simulator, parallelized=False)
 
 
@@ -91,4 +97,4 @@ if __name__ == '__main__':
 
     gft = create_gft(env)
     gft.train()
-    # gft.evaluate("models/OptimalIndividuals/[Epoch_47]Individual(144.0).json")
+    # gft.evaluate("models/OptimalIndividuals/[Epoch_21]Individual(323.3).json")

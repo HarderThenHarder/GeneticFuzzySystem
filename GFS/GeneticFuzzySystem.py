@@ -166,9 +166,9 @@ class BaseGFT(metaclass=ABCMeta):
         plt.title("Training Log For GFS Algorithm")
         plt.xlabel("Epoch(s)")
         plt.ylabel("Fitness")
-        plt.plot(self.fitness_history["min_fitness_list"], color='green', alpha=0.8, label='Min Fitness', linestyle='-.')
+        plt.plot(self.fitness_history["min_fitness_list"], color='green', alpha=0.5, label='Min Fitness', linestyle='-.')
         plt.plot(self.fitness_history["average_fitness_list"], color='r', alpha=0.8, label='Average Fitness')
-        plt.plot(self.fitness_history["max_fitness_list"], color='c', alpha=0.8, label='Max Fitness', linestyle='-.')
+        plt.plot(self.fitness_history["max_fitness_list"], color='c', alpha=0.5, label='Max Fitness', linestyle='-.')
         plt.legend()
         plt.savefig(save_log_path)
 
