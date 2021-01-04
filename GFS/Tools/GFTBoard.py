@@ -107,8 +107,8 @@ def visualize_individual(individual: dict):
     if not get_data("first_load_individual"):
         delete_item("Visualize Individual")
 
-    with window("Visualize Individual", width=800, height=400):
-        set_window_pos("Visualize Individual", 400, 200)
+    with window("Visualize Individual", width=850, height=400):
+        set_window_pos("Visualize Individual", 300, 300)
         for text in rules_text_list:
             add_text(text)
 
