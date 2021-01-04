@@ -6,9 +6,7 @@
 
 GFS 库中定义了 BaseGFT 基类，GFT 可以支持训练多个 GFS 控制器，一个控制器用于决策一个特定行为。下面对 GFT 算法包使用方法进行简单介绍，以 Open-AI gym 中 CartPole-v0 场景作为训练示例，示例代码见 "main.py"
 
-
-
-> 1. GFT 决策器的使用方法
+#### 1. GFT 决策器的使用方法
 
 首先从 GFS 包中引入 BaseGFT 基类，
 
@@ -105,7 +103,7 @@ if __name__ == '__main__':
 
 
 
-> 2. 训练模型保存
+####  <span id="jump2">2. 训练模型保存</span>
 
 每一个 Epoch 训练完成后，训练 model 会存放入入口函数目录下的 `./models` 文件夹下，其中 `AllPopulations` 文件夹下存放整个训练过程中一个种群下的所有个体对象，保存了当前的训练状态，可通过载入种群信息恢复总群状态继续进行训练；`OptimalIndividual` 文件夹下存放了每一代中最优秀的个体对象；`RuleLibAndMF`文件夹下保存了最优个体的规则库和隶属函数参数，文件保存名应为：
 
@@ -144,11 +142,17 @@ MF 文件中的数据内容如下：
 }
 ```
 
+Individual 文件中的数据内容如下：
+
+```python
+{"rule_lib_chromosome": ..., "mf_chromosome": ..., "fitness": 247.50138874281646, "flag": 1}
+```
+
 训练过程中的训练曲线保存在：`./models/tarin_log.png`：
 
 <div align=center><img src="assets/train_log.png" width=500></div>
 
-> 3. pretrained 模型加载
+#### 3. pretrained 模型加载
 
 当模型训练好后，我们可以调用 gft.evalutate() 函数来查看我们训练模型的效果，评估函数中需要输入模型的保存路径，如：
 
@@ -181,3 +185,35 @@ gft.evaluate("models/OptimalIndividuals/[Epoch_47]Individual(144.0).json")
 得到如下窗口：
 
 <div align=center><img src="assets/gym_demo.gif" width=500></div>
+
+
+#### 4. GFTBoard
+
+为了方便对训练结果进行分析处理，可以运行 `GFS.Tools.GFTBoard.py `  来可视化训练结果：
+
+1. 训练过程中 Fitness 曲线图
+
+2. 训练过程中的超参数
+
+3. 最优模型的文字型规则库
+
+若要使用GFTBoard，需安装 `dearpygui` 三方库，输入以下命令安装三方库：
+
+```powershell
+pip install dearpygui
+```
+
+安装完成后，运行 `GFTBorad.py` 文件，得到如下界面：
+
+<div align=center><img src="assets/GFSBoard1.png" width=600></div>
+
+点击 `Choose Log File` 按钮，选择保存的模型文件，文件保存位置通常在 `models` 文件夹下，名为 `events.out.gft` 文件，打开后，界面上出现训练过程中的 fitness 变化曲线，同时，右边窗口出现训练过程中的超参数设置（训练轮数，基因突变率等），如下：
+
+<div align=center><img src="assets/GFSBoard2.png" width=600></div>
+
+接下来，点击 `Choose Individual` 按钮，选择 `OptimalIndividuals` 文件夹下的一个 Individual 文件查看一个最优模型的模糊规则库：
+
+<div align=center><img src="assets/GFSBoard3.png" width=600></div>
+
+<div align=center><img src="assets/GFSBoard4.png" width=600></div>
+

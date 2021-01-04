@@ -43,6 +43,8 @@ def choose_individual_file(sender, data):
     选择 GFT Log 文件。
     @return: None
     """
+    if not get_data("rule_lib_list"):
+        raise ValueError("[ERROR] You must Choose Log File before visualize Individual.")
     open_file_dialog(callback=apply_select_individual_file, extensions='.json,.*')
 
 
@@ -100,7 +102,7 @@ def visualize_individual(individual: dict):
         rule_lib.encode_by_chromosome(individual["rule_lib_chromosome"][i])
         rules = rule_lib.decode()
         for idx, rule in enumerate(rules):
-            rules_text_list.append("[%3d]" % idx + rule.get_rule_str())
+            rules_text_list.append("[%d]" % idx + rule.get_rule_str())
 
     if not get_data("first_load_individual"):
         delete_item("Visualize Individual")
