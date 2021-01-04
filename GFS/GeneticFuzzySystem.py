@@ -166,9 +166,9 @@ class BaseGFT(metaclass=ABCMeta):
         plt.title("Training Log For GFS Algorithm")
         plt.xlabel("Epoch(s)")
         plt.ylabel("Fitness")
-        plt.plot(self.fitness_history["min_fitness_list"], color='green', alpha=0.5, label='Min Fitness', linestyle='-.')
+        plt.plot(self.fitness_history["min_fitness_list"], color='green', alpha=0.8, label='Min Fitness', linestyle='-.')
         plt.plot(self.fitness_history["average_fitness_list"], color='r', alpha=0.8, label='Average Fitness')
-        plt.plot(self.fitness_history["max_fitness_list"], color='c', alpha=0.5, label='Max Fitness', linestyle='-.')
+        plt.plot(self.fitness_history["max_fitness_list"], color='c', alpha=0.8, label='Max Fitness', linestyle='-.')
         plt.legend()
         plt.savefig(save_log_path)
 
@@ -231,14 +231,19 @@ class BaseGFT(metaclass=ABCMeta):
         fitness_list_for_choice = copy.deepcopy(fitness_list)
 
         if min(fitness_list_for_choice) < 0:
-            """ 如果列表中有负数，则将列表整体平移使其列表中全为正数，保证后面计算概率正确, 加1e-6是为了保证fitness全为正，计算的概率不为0 """
-            fitness_list_for_choice = [x - min(fitness_list_for_choice) + 1e-6 for x in fitness_list_for_choice]
+            """ 如果列表中有负数，则将列表整体平移使其列表中全为正数，保证后面计算概率正确 """
+            fitness_list_for_choice = [x - min(fitness_list_for_choice) for x in fitness_list_for_choice]
 
         sum_fitness = sum(fitness_list_for_choice)
-        fit_pro = [fitness / sum_fitness for fitness in fitness_list_for_choice]
+
+        """ 边界情况：fitness全为0的情况 -> fitness_list = [0, 0, 0, 0] """
+        if not sum_fitness:
+            fit_pro = [1 / len(fitness_list_for_choice) for _ in fitness_list_for_choice]
+        else:
+            fit_pro = [fitness / sum_fitness for fitness in fitness_list_for_choice]
 
         """ 按照概率分布选择出种群规模条染色体 """
-        selected_population = np.random.choice(self.population, self.population_size, replace=False, p=fit_pro)
+        selected_population = np.random.choice(self.population, self.population_size, replace=True, p=fit_pro)
 
         use_time = time.time() - start
         max_f, average_f, min_f = max(fitness_list), sum(fitness_list) / len(fitness_list), min(fitness_list)
@@ -407,13 +412,14 @@ class BaseGFT(metaclass=ABCMeta):
                 rule_lib.save_individual_to_file(current_path_individual, optimal_individual)
 
     def train(self, save_best_rulelib_mf_path="RuleLibAndMF", save_all_path="AllPopulations",
-              save_best_individual_path="OptimalIndividuals", base_path="models") -> None:
+              save_best_individual_path="OptimalIndividuals", base_path="models", load_last_checkpoint=None) -> None:
         """
         遗传算法训练函数。
         @param base_path: 模型存放总路径
         @param save_all_path: 种群存放路径
         @param save_best_rulelib_mf_path: 最优个体存放路径
         @param save_best_individual_path: 个体模型存放路径
+        @param load_last_checkpoint: 是否载入之前的模型继续学习，若设置该形参为 all_population.json 文件存放路径
         @return: None
         """
 
@@ -432,9 +438,15 @@ class BaseGFT(metaclass=ABCMeta):
         if not os.path.exists(save_all_path):
             os.mkdir(save_all_path)
 
-        print("\nStart to Initialize Rule Lib...")
-        self.init_population()
-        print("\nFinished Initialized Rule Lib, Start to train...\n")
+        if not load_last_checkpoint:
+            print("\n[INFO]Initializing Rule Lib...")
+            self.init_population()
+            print("\n[INFO]Finished Initialize Rule Lib, Start to train...\n")
+        else:
+            print("\n[INFO]Loading last checkpoint: '{}'...".format(load_last_checkpoint))
+            self.load_all_population(load_last_checkpoint)
+            print("\n[INFO]Finished load Rule Lib, Start to train...\n")
+
         for count in range(self.episode):
             count += 1
             self.cross()
