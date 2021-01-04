@@ -41,10 +41,10 @@ class GFT(BaseGFT):
 
             """ CartPole-v0 中共包含 4 个观测，在FIS决策器中需要对应拆分成 4 个模糊变量输入 """
             obs_input = {
-                "obs1": obs_list[0],
-                "obs2": obs_list[1],
-                "obs3": obs_list[2],
-                "obs4": obs_list[3]
+                "car_pos": obs_list[0],
+                "car_speed": obs_list[1],
+                "pole_angle": obs_list[2],
+                "pole_speed": obs_list[3]
             }
 
             action = controller.simulation_get_action(obs_input)    # 利用 FIS 决策器获得行为决策
@@ -70,10 +70,10 @@ def create_gft(simulator) -> GFT:
     """
 
     """ 1. 构建模糊变量，采用 gym 中 CartPole-v0 作为示例，共包含 4 个观测输入，1 个行为输出 """
-    obs1 = FuzzyVariable([-4.9, 4.9], "obs1")
-    obs2 = FuzzyVariable([-3.40e+38, 3.40e+38], "obs2")
-    obs3 = FuzzyVariable([-0.418, 0.418], "obs3")
-    obs4 = FuzzyVariable([-4.18e-01, 4.18e-01], "obs4")
+    obs1 = FuzzyVariable([-4.9, 4.9], "car_pos")
+    obs2 = FuzzyVariable([-3.40e+38, 3.40e+38], "car_speed")
+    obs3 = FuzzyVariable([-0.418, 0.418], "pole_angle")
+    obs4 = FuzzyVariable([-4.18e-01, 4.18e-01], "pole_speed")
 
     action = FuzzyVariable([0, 1], "action")
 
@@ -88,7 +88,7 @@ def create_gft(simulator) -> GFT:
     controller = RuleLib([obs1, obs2, obs3, obs4, action])
 
     """ 4. 构建 GFT 对象 """
-    return GFT(rule_lib_list=[controller], population_size=40, episode=200, mutation_pro=0.1, cross_pro=0.9,
+    return GFT(rule_lib_list=[controller], population_size=20, episode=200, mutation_pro=0.1, cross_pro=0.9,
                simulator=simulator, parallelized=False)
 
 

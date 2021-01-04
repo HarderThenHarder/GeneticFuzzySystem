@@ -8,8 +8,8 @@ class Rule(object):
         self.antecedent = antecedent
         self.consequent = consequent
 
-    def print(self):
+    def get_rule_str(self):
         antecedent_string = self.antecedent.clause.get_string()
         consequent_string = self.consequent.clause.parent + ' is ' + self.consequent.clause.label
         rule_string = antecedent_string + ' THEN ' + consequent_string
-        print(rule_string)
+        return rule_string

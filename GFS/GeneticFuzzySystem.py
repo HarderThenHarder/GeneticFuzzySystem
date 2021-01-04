@@ -14,6 +14,7 @@ from abc import ABCMeta, abstractmethod
 import copy
 import time
 import matplotlib.pyplot as plt
+import pickle
 
 
 class BaseGFT(metaclass=ABCMeta):
@@ -37,7 +38,8 @@ class BaseGFT(metaclass=ABCMeta):
         self.parallelized = parallelized
         self.fitness_history = {"min_fitness_list": [],
                                 "max_fitness_list": [],
-                                "average_fitness_list": []}
+                                "average_fitness_list": [],
+                                "time_used_list": []}
 
     def init_population(self) -> None:
         """
@@ -155,22 +157,40 @@ class BaseGFT(metaclass=ABCMeta):
         print('\r[Epoch: %d/%d][' % (epoch, total_epoch) + '=' * current_progress + '-' * (
                 max_len - current_progress) + ']', end='')
 
-    def save_train_history(self, save_log_path="models/train_log.png"):
+    def save_train_history(self, save_image_path="models/train_log.png", save_log_file_path="models/events.out.gft"):
         """
         保存训练曲线到本地文件中。
-        @param save_log_path: 曲线图存储路径
+        @param save_log_file_path: 将GFT对象存储路径
+        @param save_image_path: 曲线图存储路径
         @return: None
         """
-        plt.clf()
-        plt.grid(True, linestyle='--', alpha=0.5)
-        plt.title("Training Log For GFS Algorithm")
-        plt.xlabel("Epoch(s)")
-        plt.ylabel("Fitness")
-        plt.plot(self.fitness_history["min_fitness_list"], color='green', alpha=0.8, label='Min Fitness', linestyle='-.')
-        plt.plot(self.fitness_history["average_fitness_list"], color='r', alpha=0.8, label='Average Fitness')
-        plt.plot(self.fitness_history["max_fitness_list"], color='c', alpha=0.8, label='Max Fitness', linestyle='-.')
-        plt.legend()
-        plt.savefig(save_log_path)
+        """ 存放训练曲线图到本地 """
+        if save_image_path:
+            plt.clf()
+            plt.grid(True, linestyle='--', alpha=0.5)
+            plt.title("Training Log For GFS Algorithm")
+            plt.xlabel("Epoch(s)")
+            plt.ylabel("Fitness")
+            plt.plot(self.fitness_history["min_fitness_list"], color='green', alpha=0.8, label='Min Fitness', linestyle='-.')
+            plt.plot(self.fitness_history["average_fitness_list"], color='r', alpha=0.8, label='Average Fitness')
+            plt.plot(self.fitness_history["max_fitness_list"], color='c', alpha=0.8, label='Max Fitness', linestyle='-.')
+            plt.legend()
+            plt.savefig(save_image_path)
+
+        """ 存放当前对象到本地 """
+        if save_log_file_path:
+            log_dict = {
+                "fitness_history": self.fitness_history,
+                "cross_pro": self.cross_pro,
+                "mutate_pro": self.mutation_pro,
+                "episode": self.episode,
+                "population_size": self.population_size,
+                "parallelized": self.parallelized,
+                "rule_lib_list": self.rule_lib_list
+            }
+            f = open(save_log_file_path, 'wb')
+            pickle.dump(log_dict, f, 0)
+            f.close()
 
     def compute_with_parallel(self, epoch, total_epoch):
         """
@@ -250,6 +270,7 @@ class BaseGFT(metaclass=ABCMeta):
         self.fitness_history["min_fitness_list"].append(min_f)
         self.fitness_history["average_fitness_list"].append(average_f)
         self.fitness_history["max_fitness_list"].append(max_f)
+        self.fitness_history["time_used_list"].append(use_time)
 
         self.save_train_history()
 

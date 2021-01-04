@@ -7,11 +7,12 @@ from .Rule import Rule
 
 
 class RuleLib(object):
-    def __init__(self, fuzzy_variable_list):
+    def __init__(self, fuzzy_variable_list=None):
         self.rule_lib = None
         self.chromosome = None
-        self.fuzzy_variable_list = copy.deepcopy(fuzzy_variable_list)
-        self.generate_random_rule_base(len(self.fuzzy_variable_list) - 1)   # 初始化规则库，默认规则前件个数等于模糊变量总长度-1
+        if fuzzy_variable_list:
+            self.fuzzy_variable_list = copy.deepcopy(fuzzy_variable_list)
+            self.generate_random_rule_base(len(self.fuzzy_variable_list) - 1)   # 初始化规则库，默认规则前件个数等于模糊变量总长度-1
         self.count = 0
 
     def encode(self, rules):
