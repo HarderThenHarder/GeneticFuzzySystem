@@ -239,6 +239,10 @@ class BaseGFT(metaclass=ABCMeta):
         @param total_epoch: 总共须迭代的轮数
         @return: None
         """
+
+        # TODO 完成精英筛选
+        # TODO 完成突变率由大变小
+
         start = time.time()
 
         if self.parallelized:
@@ -250,20 +254,14 @@ class BaseGFT(metaclass=ABCMeta):
         fitness_list = [x["fitness"] for x in self.population]
         fitness_list_for_choice = copy.deepcopy(fitness_list)
 
-        if min(fitness_list_for_choice) < 0:
-            """ 如果列表中有负数，则将列表整体平移使其列表中全为正数，保证后面计算概率正确 """
-            fitness_list_for_choice = [x - min(fitness_list_for_choice) for x in fitness_list_for_choice]
+        """ 将fitness平移到原点，加1e-6是为了防止fitness全为0的情况，会导致之后概率计算出错 """
+        fitness_list_for_choice = [x - min(fitness_list_for_choice) + 1e-6 for x in fitness_list_for_choice]
 
         sum_fitness = sum(fitness_list_for_choice)
-
-        """ 边界情况：fitness全为0的情况 -> fitness_list = [0, 0, 0, 0] """
-        if not sum_fitness:
-            fit_pro = [1 / len(fitness_list_for_choice) for _ in fitness_list_for_choice]
-        else:
-            fit_pro = [fitness / sum_fitness for fitness in fitness_list_for_choice]
+        fit_pro = [fitness / sum_fitness for fitness in fitness_list_for_choice]
 
         """ 按照概率分布选择出种群规模条染色体 """
-        selected_population = np.random.choice(self.population, self.population_size, replace=True, p=fit_pro)
+        selected_population = np.random.choice(self.population, self.population_size, replace=False, p=fit_pro)
 
         use_time = time.time() - start
         max_f, average_f, min_f = max(fitness_list), sum(fitness_list) / len(fitness_list), min(fitness_list)
@@ -300,7 +298,7 @@ class BaseGFT(metaclass=ABCMeta):
 
             """ 交换子代对应位置的基因片段 """
             offspring[0]["rule_lib_chromosome"][index][cross_left_position_rule_lib:cross_right_position_rule_lib + 1], \
-            offspring[1]["rule_lib_chromosome"][index][cross_left_position_rule_lib:cross_right_position_rule_lib + 1] = \
+                offspring[1]["rule_lib_chromosome"][index][cross_left_position_rule_lib:cross_right_position_rule_lib + 1] = \
                 offspring[1]["rule_lib_chromosome"][index][
                 cross_left_position_rule_lib:cross_right_position_rule_lib + 1], \
                 offspring[0]["rule_lib_chromosome"][index][
@@ -311,7 +309,7 @@ class BaseGFT(metaclass=ABCMeta):
             cross_right_position_mf = random.randint(cross_left_position_mf, current_mf_chromosome_size - 1)
 
             offspring[0]["mf_chromosome"][index][cross_left_position_mf:cross_right_position_mf + 1], \
-            offspring[1]["mf_chromosome"][index][cross_left_position_mf:cross_right_position_mf + 1] = \
+                offspring[1]["mf_chromosome"][index][cross_left_position_mf:cross_right_position_mf + 1] = \
                 offspring[1]["mf_chromosome"][index][cross_left_position_mf:cross_right_position_mf + 1], \
                 offspring[0]["mf_chromosome"][index][cross_left_position_mf:cross_right_position_mf + 1]
 

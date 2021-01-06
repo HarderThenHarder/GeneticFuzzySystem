@@ -8,8 +8,6 @@ from dearpygui.simple import *
 import os
 import json
 
-from  GFS.FIS.RuleLib import RuleLib
-
 
 def plot_callback():
     """

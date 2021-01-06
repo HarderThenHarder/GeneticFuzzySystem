@@ -52,10 +52,10 @@ class GFT(BaseGFT):
             fitness += r
 
             """ Reward Shaping: 若杆子与垂直面夹角越小则得分越高 """
-            angle = abs(obs_list[2])
-            r_shaping = (0.418 - angle) / 0.418
-
-            fitness += r_shaping
+            # angle = abs(obs_list[2])
+            # r_shaping = (0.418 - angle) / 0.418
+            #
+            # fitness += r_shaping
 
             if done:
                 break
