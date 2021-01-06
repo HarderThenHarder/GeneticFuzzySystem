@@ -97,4 +97,4 @@ if __name__ == '__main__':
 
     gft = create_gft(env)
     gft.train()
-    # gft.evaluate("models/OptimalIndividuals/[Epoch_21]Individual(323.3).json")
+    # gft.evaluate("models/OptimalIndividuals/[Epoch_59]Individual(200.0).json")

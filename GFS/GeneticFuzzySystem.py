@@ -18,7 +18,8 @@ import pickle
 
 
 class BaseGFT(metaclass=ABCMeta):
-    def __init__(self, rule_lib_list, population_size, episode, mutation_pro, cross_pro, simulator, parallelized=False):
+    def __init__(self, rule_lib_list, population_size, episode, mutation_pro, cross_pro, simulator, parallelized=False,
+                 protect_elite_num=1):
         """
         GFT基类。
         @param rule_lib_list: 规则库对象
@@ -26,10 +27,12 @@ class BaseGFT(metaclass=ABCMeta):
         @param episode: 训练多少轮
         @param mutation_pro: 变异概率
         @param cross_pro: 交叉概率
+        @param protect_elite_num: 精英染色体保护数目，fitness 最大的 N 条染色体不参与 mutate
         @param simulator: 仿真环境对象，用于获取观测、回报等
         """
+        self.population_size = population_size if not population_size % 2 else population_size + 1
+        self.protect_elite_num = protect_elite_num if protect_elite_num <= population_size else population_size
         self.rule_lib_list = rule_lib_list
-        self.population_size = population_size
         self.episode = episode
         self.mutation_pro = mutation_pro
         self.cross_pro = cross_pro
@@ -90,7 +93,6 @@ class BaseGFT(metaclass=ABCMeta):
         @param individual: 个体单位
         @return: 该个体的适应值
         """
-
         if self.parallelized:
             assert queue, "Parallelized Mode Need multiprocessing.Queue() object, please pass @param: queue."
             assert individual_id is not None, "Parallelized Mode Need individual ID, please pass @param: individual_id."
@@ -239,10 +241,6 @@ class BaseGFT(metaclass=ABCMeta):
         @param total_epoch: 总共须迭代的轮数
         @return: None
         """
-
-        # TODO 完成精英筛选
-        # TODO 完成突变率由大变小
-
         start = time.time()
 
         if self.parallelized:
@@ -341,7 +339,11 @@ class BaseGFT(metaclass=ABCMeta):
         对该段中的每一个基因执行一次基因突变。
         @return: None
         """
-        for individual in self.population:
+        """ 保护 fitness 前 N 大的染色体不发生变异 """
+        self.population.sort(key=lambda x: x["fitness"], reverse=True)
+        mutate_population = self.population[self.protect_elite_num:]
+
+        for individual in mutate_population:
             pro = random.random()
 
             """ 对每一个规则库都要进行突变 """
