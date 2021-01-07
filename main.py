@@ -96,5 +96,5 @@ if __name__ == '__main__':
     env = gym.make('CartPole-v0')
 
     gft = create_gft(env)
-    # gft.train()
-    gft.evaluate("models/OptimalIndividuals/[Epoch_24]Individual(151.0).json")
+    gft.train()
+    # gft.evaluate("models/OptimalIndividuals/[Epoch_24]Individual(151.0).json")

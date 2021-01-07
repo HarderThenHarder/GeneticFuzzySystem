@@ -61,41 +61,37 @@ class DecisionSystemSimulation(object):
                 continue
             clip_value[action_id] = max(clip_value[action_id], strength)
 
-        """ 使用每一个 Term 的 clip_value（规则强度）进行插值，求出插值之后的 universe """
-        mf_value = []
-        interp_universe = []
-        normal_universe = []
+        """ 使用每一个 Term 的 clip_value（规则强度）进行插值计算，求出所有 Terms 的联合图形 """
 
-        """ 根据之前计算出的每一个 Term 在 x 轴取值范围的并集"""
+        """ 用 clip 去截取三角隶属函数，交点的横坐标有可能是小数，但在 for 循环遍历横坐标时无法计算到小数，因此需手动求解交点横坐标 """
+        interp_universe = []  # 用隶属值（clip value）去截三角形，得到两个交点的横坐标
         for term in output_fuzzy_variable.all_term():
-            id = term.id
-            clip = clip_value[id]
+            index = term.id
+            clip = clip_value[index]
             a = term.trimf[0]
             b = term.trimf[1]
             c = term.trimf[2]
-            if math.fabs(clip - 1) < 1e-6:
+            if clip == 1:
                 continue
             if a != b:
-                interp_universe.append(clip * (b - a) + a)
+                interp_universe.append(clip * (b - a) + a)  # 利用相似三角形定理，求出左交点的横坐标：(x-a)/(b-a) = clip_v / 1
             if b != c:
-                interp_universe.append(c - clip * (c - b))
+                interp_universe.append(c - clip * (c - b))  # 利用相似三角形定理，求出右交点的横坐标：(c-x)/(c-b) = clip_v / 1
 
         """ 输出模糊变量原本各 Term 的 x 轴取值范围 """
-        for index in range(output_fuzzy_variable.universe_down, output_fuzzy_variable.universe_up + 1):
-            normal_universe.append(index)
+        normal_universe = [i for i in range(output_fuzzy_variable.universe_down, output_fuzzy_variable.universe_up + 1)]
+        """ 将交点横坐标并入到 Term 的 x 轴整数集中，为了方便后面 Mean of Max 方法计算最大 clip 值的横坐标集合 """
         final_universe = np.union1d(interp_universe, normal_universe)   # np.union1d 求并集
 
-        for index in range(action_num):
-            mf_value.append([])
-
-        """ 根据每一个 Term（Action）的隶属函数值  """
+        """ 计算每一个 Term 在每一个横坐标点（整数点+两个交点）的隶属度  """
+        mf_value = [[] for _ in range(action_num)]
         for index_universe in range(len(final_universe)):
             for index_action in range(action_num):
                 mf_value[index_action].append(
                     output_terms_list[index_action].compute_membership_value(final_universe[index_universe]))
 
+        """ 所有 Term 的联合最大隶属度图形（最大y值） """
         output_distribution = []
-
         for index_universe in range(len(final_universe)):
             Max = 0
             for index_action in range(action_num):
@@ -104,12 +100,12 @@ class DecisionSystemSimulation(object):
                 Max = max(Max, mf_value[index_action][index_universe])
             output_distribution.append(Max)
 
-        """ 使用 mean of maximum 去模糊化分布 """
+        """ 使用 mean of maximum 去模糊化分布，求所有对应y值等于最大y值的横坐标点的中心值 """
         Max = max(output_distribution)
         count = 0
         sum_count = 0
         for i in range(len(output_distribution)):
-            if math.fabs(Max - output_distribution[i]) <= 1e-6:
+            if output_distribution[i] == Max:
                 sum_count += final_universe[i]
                 count += 1
 
