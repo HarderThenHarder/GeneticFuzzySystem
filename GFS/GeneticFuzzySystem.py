@@ -19,7 +19,7 @@ import pickle
 
 class BaseGFT(metaclass=ABCMeta):
     def __init__(self, rule_lib_list, population_size, episode, mutation_pro, cross_pro, simulator, parallelized=False,
-                 protect_elite_num=1):
+                 protect_elite_num=1, save_interval=1):
         """
         GFT基类。
         @param rule_lib_list: 规则库对象
@@ -29,6 +29,7 @@ class BaseGFT(metaclass=ABCMeta):
         @param cross_pro: 交叉概率
         @param protect_elite_num: 精英染色体保护数目，fitness 最大的 N 条染色体不参与 mutate
         @param simulator: 仿真环境对象，用于获取观测、回报等
+        @param save_interval: 多少轮 Epoch 保存一次模型
         """
         self.population_size = population_size if not population_size % 2 else population_size + 1
         self.protect_elite_num = protect_elite_num if protect_elite_num <= population_size else population_size
@@ -39,6 +40,7 @@ class BaseGFT(metaclass=ABCMeta):
         self.population = []
         self.simulator = simulator
         self.parallelized = parallelized
+        self.save_interval = save_interval
         self.fitness_history = {"min_fitness_list": [],
                                 "max_fitness_list": [],
                                 "average_fitness_list": [],
@@ -468,21 +470,23 @@ class BaseGFT(metaclass=ABCMeta):
             self.load_all_population(load_last_checkpoint)
             print("\n[INFO]Finished load Rule Lib, Start to train...\n")
 
-        for count in range(self.episode):
+        for count in range(self.episode + 1):
             count += 1
             self.cross()
             self.mutate()
             self.select(count, self.episode)
-            self.save_all_population(os.path.join(save_all_path, "all_population{}.json".format(count)))
             optimal_individual = self.get_optimal_individual()
-            self.save_optimal_individual_to_file(
-                os.path.join(save_best_rulelib_mf_path,
-                             "[Epoch_{}]RuleLib({:.1f})".format(count, optimal_individual["fitness"])),
-                os.path.join(save_best_rulelib_mf_path,
-                             "[Epoch_{}]MF({:.1f})".format(count, optimal_individual["fitness"])),
-                os.path.join(save_best_individual_path,
-                             "[Epoch_{}]Individual({:.1f})".format(count, optimal_individual["fitness"])),
-                optimal_individual)
+
+            if not count % self.save_interval:
+                self.save_all_population(os.path.join(save_all_path, "all_population{}.json".format(count)))
+                self.save_optimal_individual_to_file(
+                    os.path.join(save_best_rulelib_mf_path,
+                                 "[Epoch_{}]RuleLib({:.1f})".format(count, optimal_individual["fitness"])),
+                    os.path.join(save_best_rulelib_mf_path,
+                                 "[Epoch_{}]MF({:.1f})".format(count, optimal_individual["fitness"])),
+                    os.path.join(save_best_individual_path,
+                                 "[Epoch_{}]Individual({:.1f})".format(count, optimal_individual["fitness"])),
+                    optimal_individual)
 
     def evaluate(self, model_name: str):
         """
