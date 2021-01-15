@@ -1,6 +1,10 @@
 ### GeneticFuzzySystem Python Package
 
-该项目是使用 python 实现的 GFS/GFT 算法包，使用时请将GFS包放入项目路径，并在项目文件中引入该工具包进行使用。
+该项目是使用 python 实现的 GFS/GFT 算法包，使用时请将GFS包放入项目路径，并在项目文件中引入该工具包进行使用，或使用 pip install 方式安装该包：
+
+```powershell
+pip install gfs
+```
 
 （GFS算法原理参考资料可见：[英文版](https://www.cs.princeton.edu/courses/archive/fall07/cos436/HIDDEN/Knapp/fuzzy004.htm)，[中文版](https://blog.csdn.net/qq_38638132/article/details/106477710)）
 
@@ -203,7 +207,7 @@ gft.evaluate("models/OptimalIndividuals/[Epoch_47]Individual(144.0).json")
 pip install dearpygui
 ```
 
-安装完成后，运行 `GFTBorad.py` 文件，得到如下界面：
+安装完成后，运行 `GFTBorad.py` 文件，（若使用 pip install 下载则在 Terminal 中运行：python -m GFS.Tools.GFTBoard 即可）得到如下界面：
 
 <div align=center><img src="assets/GFSBoard1.png" width=600></div>
 
